@@ -1,0 +1,15 @@
+name: calox-hgcal-local
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - h5py
+  - ipython
+  - jupyter
+  - matplotlib
+  - numpy
+  - pandas
+  - pip
+  - pytest
+  - python=3.11
+  - scipy
