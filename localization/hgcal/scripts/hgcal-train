@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+SCRIPTDIR=$(dirname $BASH_SOURCE)
+
+EXPERIMENT_NAME="hgcal1"
+CONFIG_DIR=".$EXPERIMENT_NAME"
+BATCH_SIZE=60
+
+TRAINCMD=hgcal-train-proc
+SIMCMD=hgcal-sim-proc
+
+# data dir
+DATA_DIR=/data/me/calox/${EXPERIMENT_NAME}
+
+# simulation configuration
+SIM_RUN_SCRIPT=run_sim.sh
+DCKR_IMG=calox-hgcal
+PARTICLE="pi-"
+ENERGY="500 GeV"
+NEVENTS=$BATCH_SIZE
+
+# trainning configuration
+
+
+hndl_sig () {
+}
+
+# initialize the study
+if [[ ! -d $CONFIG_DIR ]]; then
+    echo "Intializing the study - $CONFIG_DIR"
+    mkdir -p $CONFIG_DIR
+    if [[ $? -ne 0 ]]; then
+        echo "CANNOT CREATE CONFIG DIR!!"
+        exit 1
+    fi
+
+    if [[ ! -d $DATA_DIR ]]; then
+        mkdir -p $DATA_DIR
+        if [[ $? -ne 0 ]]; then
+            echo "CANNOT CREATE DATA DIR!!"
+            return 1
+        fi
+    fi
+
+    echo "EXPERIMENT_NAME=$EXPERIMENT_NAME" > $CONFIG_DIR/config.sh
+    echo "SCRIPTDIR=$SCRIPTDIR" >> $CONFIG_DIR/config.sh
+    echo "BATCH_SIZE=$BATCH_SIZE" >> $CONFIG_DIR/config.sh
+    echo "DATA_DIR=$DATA_DIR" >> $CONFIG_DIR/config.sh
+    echo "SIM_RUN_SCRIPT=$SIM_RUN_SCRIPT" >> $CONFIG_DIR/config.sh
+    echo "DCKR_IMG=$DCKR_IMG" >> $CONFIG_DIR/config.sh
+    echo "PARTICLE=\"$PARTICLE\"" >> $CONFIG_DIR/config.sh
+    echo "ENERGY=\"$ENERGY\"" >> $CONFIG_DIR/config.sh
+    echo "NEVENTS=$NEVENTS" >> $CONFIG_DIR/config.sh
+
+    $SCRIPTDIR/initialize_study.sh $EXPERIMENT_NAME $BATCH_SIZE
+
+    # write the initial stat
+    echo "1 0" > $CONFIG_DIR/state
+    echo "SIM" > $CONFIG_DIR/semaphore
+fi
+
+
+# kick off training process
+#$TRAINCMD $EXPERIMENT_NAME $CONFIG_DIR &
+#TRAINPID=$!
+
+# kick off simulation process
+$SCRIPTDIR/$SIMCMD $EXPERIMENT_NAME $CONFIG_DIR &
+SIMPID=$!
+
+
+
