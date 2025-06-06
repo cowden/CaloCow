@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+if [[ $# -ne 2 ]]; then
+    echo "hgcal-train-proc [study name] [config dir]"
+    exit 0
+fi
+
+EXPERIMENT_NAME=$1
+CONFIG_DIR=$2
+
+source $CONFIG_DIR/config.sh
+
+# trap process signals
+handle_intrp () {
+    echo "shutting down training process" >> $CONFIG_DIR/train_log.log
+    exit 0
+}
+trap handle_intrp 2
+
+TRAIN_ARGS="$CONFIG_DIR/checkpoint.pckl $DATA_DIR -l $CONFIG_DIR/std.pckl"
+
+while true
+do
+    # read semaphore
+    sem=`cat $CONFIG_DIR/semaphore`
+    # if, train launch
+    if [[ $sem == "TRAIN" ]]; then
+        echo "Training epoch"
+        if [[ -f $CONFIG_DIR/std.pckl ]]; then
+            STD="-s"
+        fi
+        TRAIN_CMD="python $SCRIPTDIR/train-epoch.py $TRAIN_ARGS $STD"
+        eval $TRAIN_CMD >> $CONFIG_DIR/train_log.log
+        wait
+        echo "SIM" > $CONFIG_DIR/semaphore
+
+    fi
+done

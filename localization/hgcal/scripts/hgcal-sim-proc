@@ -9,33 +9,53 @@ EXPERIMENT_NAME=$1
 CONFIG_DIR=$2
 
 source $CONFIG_DIR/config.sh
+SCRIPTDIR=$(realpath $SCRIPTDIR)
 
-intrp_recv=0
+get_batch () {
+    cat $CONFIG_DIR/state | gawk '{print $2}'
+}
+
+get_epoch () {
+    cat $CONFIG_DIR/state | gawk '{print $1}'
+}
+
+get_seed () {
+    psql -t $EXPERIMENT_NAME -c "select seed from data where id=$BATCH;"
+}
+
+BATCH=$(get_batch)
+EPOCH=$(get_epoch)
+SEED=$(get_seed)
 
 # trap process signals
 handle_intrp () {
-    echo
-    if [[ $intrp_recv -eq 0 ]]; then
-        echo "shutting down simulation process" >> $CONFIG_DIR/simulation_log.log
-        exit 0
-    fi
+    echo "shutting down simulation process" >> $CONFIG_DIR/simulation_log.log
+    exit 0
 }
 trap handle_intrp 2
 
 DCKR_BASE_ARGS="--rm -v $DATA_DIR:/work \
     -v $SCRIPTDIR:/scripts \
-    $DCKR_IMG $SIM_RUN_SCRIPT \
-    -p $PARTICLE -e $ENERGY -n $NEVENTS -b $EXPERIMENT_NAME"
+    $DCKR_IMG /scripts/$SIM_RUN_SCRIPT \
+    -p $PARTICLE -e \"$ENERGY\" -n $NEVENTS -b $EXPERIMENT_NAME"
 
 while true
 do
     # read semaphore
     sem=`cat $CONFIG_DIR/semaphore`
     # if, sim launch proc
-    if [[ $sem -eq "SIM" ]]; then
+    if [[ $sem == "SIM" ]]; then
+        BATCH=$(get_batch)
+        EPOCH=$(get_epoch)
+        SEED=$(get_seed)
+        wait
+        echo "$EPOCH $BATCH $SEED"  
         DCKR_ARGS="${DCKR_BASE_ARGS} -s $SEED"
-        echo "docker run ${DCKR_ARGS}" >> $CONFIG_DIR/simulation_log.log
+        DCKR_CMD="docker run ${DCKR_ARGS}"
+        echo "$DCKR_CMD" >> $CONFIG_DIR/simulation_log.log
+        eval $DCKR_CMD >> $CONFIG_DIR/simulation_log.log
+        wait
         echo "TRAIN" > $CONFIG_DIR/semaphore 
     fi
-    sleep 15
+    sleep 10
 done

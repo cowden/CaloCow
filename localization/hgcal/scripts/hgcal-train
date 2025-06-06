@@ -19,11 +19,30 @@ PARTICLE="pi-"
 ENERGY="500 GeV"
 NEVENTS=$BATCH_SIZE
 
-# trainning configuration
+# training configuration
+MODEL_PATH=$CONFIG_DIR/model.pckl
+STANDARDIZER_PATH=$CONFIG_DIR/standardizer.npz
 
+SIMPID=NONE
+TRAINPID=NONE
 
 hndl_sig () {
+    echo
+    echo "Interruption signal recieved - passing to sub-processes."
+# kill simulation proc
+    if [[ $SIMPID != NONE ]]; then
+        kill $SIMPID
+    fi
+# kill training proc
+    if [[ $TRAINPID != NONE ]]; then
+        kill $TRAINPID
+    fi
+
+    echo "Shutting down"
+    exit 0
 }
+
+trap hndl_sig 2
 
 # initialize the study
 if [[ ! -d $CONFIG_DIR ]]; then
@@ -51,22 +70,30 @@ if [[ ! -d $CONFIG_DIR ]]; then
     echo "PARTICLE=\"$PARTICLE\"" >> $CONFIG_DIR/config.sh
     echo "ENERGY=\"$ENERGY\"" >> $CONFIG_DIR/config.sh
     echo "NEVENTS=$NEVENTS" >> $CONFIG_DIR/config.sh
+    echo "MODEL_PATH=$MODEL_PATH" >> $CONFIG_DIR/config.sh
+    echo "STANDARDIZER_PATH=$STANDARDIZER_PATH" >> $CONFIG_DIR/config.sh
 
     $SCRIPTDIR/initialize_study.sh $EXPERIMENT_NAME $BATCH_SIZE
 
-    # write the initial stat
+    echo "INITIALIZE_MODEL=1" >> $CONFIG_DIR/mod_state
+    echo "STANDARDIZE_DATA=1" >> $CONFIG_DIR/data_state
+
+    # write the initial state
     echo "1 0" > $CONFIG_DIR/state
     echo "SIM" > $CONFIG_DIR/semaphore
+else 
+    echo "Study already initialized, recovering check-point."
 fi
 
 
 # kick off training process
-#$TRAINCMD $EXPERIMENT_NAME $CONFIG_DIR &
+#bash $SCRIPTDIR/$TRAINCMD $EXPERIMENT_NAME $CONFIG_DIR &
 #TRAINPID=$!
 
 # kick off simulation process
-$SCRIPTDIR/$SIMCMD $EXPERIMENT_NAME $CONFIG_DIR &
+echo "Kicking off simulation process"
+bash $SCRIPTDIR/$SIMCMD $EXPERIMENT_NAME $CONFIG_DIR &
 SIMPID=$!
 
 
-
+wait
