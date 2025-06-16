@@ -11,6 +11,8 @@
 #include "G4SystemOfUnits.hh"
 #include "Randomize.hh"
 
+#include "CLHEP/Random/Stat.h"
+
 namespace secal {
 
 PrimaryGeneratorAction::PrimaryGeneratorAction()
@@ -55,7 +57,8 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
 
     if ( Ebeam < 0. ) Ebeam = particleGun_->GetParticleEnergy();
     auto t = ran1.flat();  // the first draw is needed for some reason
-    G4double event_energy = (500.+ran1.flat()*(Ebeam-500.))*MeV;
+    G4double energy_err = CLHEP::HepStat::flatToGaussian(ran1.flat())*0.1*Ebeam;
+    G4double event_energy = Ebeam + energy_err;
     particleGun_->SetParticleEnergy(event_energy);
 
     particleGun_->GeneratePrimaryVertex(event);

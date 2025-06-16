@@ -92,6 +92,9 @@ unsigned EcalSD::getCellIndex_(const G4ThreeVector & x)
     while ( x.y() < gridSize_*ha_ - 2.*j*ha_ )
         j++;
 
+    i--;
+    j--;
+
     return j*gridSize_+i;
 }
 
