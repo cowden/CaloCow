@@ -59,6 +59,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
     auto t = ran1.flat();  // the first draw is needed for some reason
     G4double energy_err = CLHEP::HepStat::flatToGaussian(ran1.flat())*0.1*Ebeam;
     G4double event_energy = Ebeam + energy_err;
+    //G4double event_energy = (500.+ran1.flat()*(Ebeam-500.))*MeV;
     particleGun_->SetParticleEnergy(event_energy);
 
     particleGun_->GeneratePrimaryVertex(event);
